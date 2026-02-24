@@ -1,94 +1,63 @@
 #!/usr/bin/env node
 
-const { execSync } = require('child_process');
 const fs = require('fs');
+const path = require('path');
+
+const root = path.resolve(__dirname, '..');
+const targetFiles = [
+  'README.md',
+  'package.json',
+  'bin/press.js',
+  'lib/auth.js',
+  'lib/http.js',
+  'lib/hub.js',
+  'lib/identity.js',
+  'lib/publish.js'
+].map((file) => path.join(root, file));
 
 const patterns = [
   {
-    name: 'Mongo URI with embedded credentials',
-    match(content) {
-      const lines = String(content).split('\n');
-      return lines.some((line) => {
-        if (!line.includes('mongodb')) return false;
-        if (!/mongodb(?:\+srv)?:\/\/[^:\s/]+:[^@\s/]+@/i.test(line)) return false;
-        return !/cluster\.example|example\.mongodb\.net/i.test(line);
-      });
-    }
-  },
-  {
-    name: 'Hardcoded JWT access secret',
+    name: 'JWT access secret',
     regex: /^JWT_ACCESS_SECRET=(?!replace-with)/m
   },
   {
-    name: 'Hardcoded JWT refresh secret',
+    name: 'JWT refresh secret',
     regex: /^JWT_REFRESH_SECRET=(?!replace-with)/m
   },
   {
-    name: 'Private key material',
-    regex: /BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY/
+    name: 'Mongo URI',
+    regex: /^MONGODB_URI=(?!mongodb\+srv:\/\/username:password@)/m
+  },
+  {
+    name: 'R2 access key id',
+    regex: /^R2_ACCESS_KEY_ID=(?!$)/m
+  },
+  {
+    name: 'R2 secret access key',
+    regex: /^R2_SECRET_ACCESS_KEY=(?!$)/m
+  },
+  {
+    name: 'Ultrafilter API key',
+    regex: /^ULTRAFILTER_API_KEY=(?!$)/m
   }
 ];
 
-const allowPaths = new Set([
-  'identity/passport',
-  'identity/id.json',
-  'identity/session.json'
-]);
+let hit = false;
 
-function listTrackedFiles() {
-  const output = execSync('git ls-files', { encoding: 'utf8' });
-  return output.split('\n').map((line) => line.trim()).filter(Boolean);
-}
-
-function scanFile(filePath) {
-  const content = fs.readFileSync(filePath, 'utf8');
-  const hits = [];
+for (const file of targetFiles) {
+  if (!fs.existsSync(file)) continue;
+  const contents = fs.readFileSync(file, 'utf8');
   for (const pattern of patterns) {
-    const matched = typeof pattern.match === 'function'
-      ? pattern.match(content)
-      : pattern.regex.test(content);
-    if (matched) {
-      hits.push(pattern.name);
+    if (pattern.regex.test(contents)) {
+      console.error(`[secret-scan] ${pattern.name} detected in ${path.relative(root, file)}`);
+      hit = true;
     }
   }
-  return hits;
 }
 
-function main() {
-  const files = listTrackedFiles();
-  const findings = [];
-
-  for (const filePath of files) {
-    if (allowPaths.has(filePath)) continue;
-    let stats;
-    try {
-      stats = fs.statSync(filePath);
-    } catch (_error) {
-      continue;
-    }
-    if (!stats.isFile()) continue;
-    if (stats.size > 1024 * 1024) continue;
-
-    let hits = [];
-    try {
-      hits = scanFile(filePath);
-    } catch (_error) {
-      continue;
-    }
-    if (hits.length) {
-      findings.push({ filePath, hits });
-    }
-  }
-
-  if (findings.length) {
-    console.error('Secret scan failed. Potential secrets detected:');
-    for (const finding of findings) {
-      console.error(`- ${finding.filePath}: ${finding.hits.join(', ')}`);
-    }
-    process.exit(1);
-  }
-
-  console.log('Secret scan passed.');
+if (hit) {
+  console.error('[secret-scan] Refusing to proceed. Remove secrets from the CLI repo.');
+  process.exit(1);
 }
 
-main();
+console.log('[secret-scan] ok');

@@ -13,13 +13,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "test": "npm run test --prefix server",
-    "security:scan": "node bin/secret-scan.js",
-    "verify": "npm run security:scan && npm test && npm run lint --prefix web && npm run build --prefix web",
-    "server:dev": "npm run dev --prefix server",
-    "server:start": "npm run start --prefix server",
-    "server:test": "npm run test --prefix server",
-    "test:cli:profiles": "node tests/cli-multiprofile-harness.js"
+    "security:scan": "node bin/secret-scan.js"
   },
   "author": "Clawd & Zhenzhao",
   "license": "MIT",

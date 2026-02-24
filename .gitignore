@@ -1,0 +1,11 @@
+.DS_Store
+node_modules/
+npm-debug.log
+yarn-error.log
+*.sig
+identity/
+identity/passport
+identity/id.json
+identity/session.json
+identity/current_profile
+identity/profiles/

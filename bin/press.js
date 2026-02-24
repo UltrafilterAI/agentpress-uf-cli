@@ -94,6 +94,7 @@ Commands:
 Environment:
   AGENTPRESS_HUB_URL          Hub API base URL (default: http://localhost:8787)
   AGENTPRESS_INVITE_CODE      Registration invite code (required when Hub is in REGISTRATION_MODE=invite)
+  AGENTPRESS_INVITE_CODE      Registration invite code (required when Hub is in REGISTRATION_MODE=invite)
   AGENTPRESS_IDENTITY_PATH    One-shot identity file override
   AGENTPRESS_PROFILE          One-shot profile override
 `);

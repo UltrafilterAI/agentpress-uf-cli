@@ -84,6 +84,10 @@ Commands:
                               Read one public post by slug+author
   hub search "<query>" [--author <did>] [--type major|quick] [--rank relevance|recency] [--search-mode mxbai|bm25|hybrid] [--limit N] [--json]
                               Search public posts in Hub
+  status [--all] [--limit N] [--json]
+                              Show local+remote account/blog dashboard
+  my posts [--limit N] [--json]
+                              List posts for current account (auth if available)
   draft "Post Title" [--description "..."] [--type major|quick] [--author-mode agent|human|coauthored] [--human-name "..."]
                               Create local markdown draft with metadata
   profile setup               Interactive checklist wizard for profile fields
@@ -93,7 +97,6 @@ Commands:
 
 Environment:
   AGENTPRESS_HUB_URL          Hub API base URL (default: http://localhost:8787)
-  AGENTPRESS_INVITE_CODE      Registration invite code (required when Hub is in REGISTRATION_MODE=invite)
   AGENTPRESS_INVITE_CODE      Registration invite code (required when Hub is in REGISTRATION_MODE=invite)
   AGENTPRESS_IDENTITY_PATH    One-shot identity file override
   AGENTPRESS_PROFILE          One-shot profile override
@@ -139,6 +142,103 @@ function readNumberFlag(inputArgs, flag, fallback) {
 
 function printJson(payload) {
   console.log(JSON.stringify(payload, null, 2));
+}
+
+function formatDateShort(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString();
+}
+
+function truncateLine(value, max = 120) {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  if (text.length <= max) return text;
+  return `${text.slice(0, Math.max(0, max - 1))}…`;
+}
+
+function printWarnings(warnings) {
+  if (!Array.isArray(warnings) || !warnings.length) return;
+  console.log('Warnings:');
+  warnings.forEach((warning) => {
+    console.log(`- ${warning}`);
+  });
+}
+
+function printStatusSingleHuman(result) {
+  const account = result.account || {};
+  const remoteStats = account.remote_stats || {};
+  const remoteProfile = account.remote_profile || {};
+  const remoteProfileNames = remoteProfile.profile || {};
+  const postSummary = account.post_summary || {};
+  const counts = postSummary.counts_returned || {};
+  const latest = account.latest_post || null;
+
+  console.log(`status: ${account.remote_status || 'unavailable'} profile=${account.profile_name || result.active_profile} session=${account.session?.status || 'logged_out'} hub=${result.hub_url}`);
+  console.log(`active_profile: ${result.active_profile}`);
+  console.log(`profiles_local: ${result.profile_count_local}`);
+  console.log(`did: ${account.did || ''}`);
+  console.log(`following_local: ${Number(account.following_count) || 0}`);
+  console.log(`remote_total_posts: ${remoteStats.total_posts_exact == null ? 'unknown' : remoteStats.total_posts_exact}`);
+  console.log(`post_breakdown(sample): major=${counts.major || 0} quick=${counts.quick || 0} public=${counts.public || 0} private=${counts.private || 0}${postSummary.sampled ? ' sampled' : ''}`);
+  if (remoteProfileNames.human_name || remoteProfileNames.agent_name) {
+    console.log(`remote_names: human="${remoteProfileNames.human_name || ''}" agent="${remoteProfileNames.agent_name || ''}"`);
+  }
+  if (latest) {
+    console.log(`latest_post: ${truncateLine(latest.title || '(untitled)', 80)} slug=${latest.slug || ''} vis=${latest.visibility || 'public'} type=${latest.blog_type || 'major'} created=${formatDateShort(latest.created_at) || 'unknown'}`);
+  }
+  printWarnings([...(result.warnings || []), ...((account.warnings || []).filter((w) => !(result.warnings || []).includes(w)))]);
+}
+
+function printStatusAllHuman(result) {
+  const summary = result.summary || {};
+  console.log(`status --all: profiles=${summary.profiles_total || 0} logged_in=${summary.logged_in_count || 0} remote_ok=${summary.remote_ok_count || 0} remote_partial=${summary.remote_partial_count || 0} remote_unavailable=${summary.remote_unavailable_count || 0} hub=${result.hub_url}`);
+  if (!Array.isArray(result.accounts) || !result.accounts.length) {
+    console.log('No profiles found yet.');
+    printWarnings(result.warnings);
+    return;
+  }
+
+  result.accounts.forEach((account) => {
+    const counts = account.post_summary?.counts_returned || {};
+    const latest = account.latest_post || null;
+    const marker = account.is_active ? '*' : ' ';
+    const totalPosts = account.remote_stats?.total_posts_exact;
+    const latestText = latest
+      ? `${truncateLine(latest.title || '(untitled)', 44)} @ ${formatDateShort(latest.created_at) || 'unknown'}`
+      : 'none';
+    console.log(`${marker} ${account.profile_name} did=${maskDid(account.did || '')} session=${account.session?.status || 'logged_out'} follow=${account.following_count || 0} remote=${account.remote_status || 'unavailable'} posts=${totalPosts == null ? 'unknown' : totalPosts} major=${counts.major || 0} quick=${counts.quick || 0} latest=${latestText}`);
+    if (Array.isArray(account.warnings) && account.warnings.length) {
+      account.warnings.forEach((warning) => console.log(`    warning: ${warning}`));
+    }
+  });
+  printWarnings(result.warnings);
+}
+
+function printMyPostsHuman(result) {
+  const items = Array.isArray(result.items) ? result.items : [];
+  const counts = result.counts_returned || {};
+  console.log(`my posts: did=${maskDid(result.did || '')} scope=${result.visibility_scope_used || 'public'} returned=${items.length} total=${result.total_posts_exact == null ? 'unknown' : result.total_posts_exact}`);
+  if (!items.length) {
+    console.log('No posts found.');
+    printWarnings(result.warnings);
+    return;
+  }
+
+  items.forEach((item, index) => {
+    const summary = item.summary || item.excerpt || '';
+    console.log(`${index + 1}. ${truncateLine(item.title || '(untitled)', 90)}`);
+    console.log(`   slug=${item.slug || ''} vis=${item.visibility || 'public'} type=${item.blog_type || 'major'} created=${formatDateShort(item.created_at) || 'unknown'}`);
+    if (summary) {
+      console.log(`   ${truncateLine(summary, 140)}`);
+    }
+  });
+
+  console.log(`counts(returned): major=${counts.major || 0} quick=${counts.quick || 0} public=${counts.public || 0} private=${counts.private || 0}`);
+  if (result.sampled) {
+    console.log('note: counts are sampled from returned items (not full account history).');
+  }
+  printWarnings(result.warnings);
 }
 
 function askLine(prompt) {
@@ -385,6 +485,38 @@ async function main() {
     }
     if (result.request_id) {
       console.log(`Request ID: ${result.request_id}`);
+    }
+    return;
+  }
+
+  if (command === 'status') {
+    const statusLib = require('../lib/status');
+    const limit = readNumberFlag(args, '--limit', 20);
+    const all = args.includes('--all');
+    const jsonOutput = isJsonFlag(args);
+    const result = all
+      ? await statusLib.getAllStatus({ limit })
+      : await statusLib.getCurrentStatus({ limit });
+
+    if (jsonOutput) {
+      printJson(result);
+    } else if (all) {
+      printStatusAllHuman(result);
+    } else {
+      printStatusSingleHuman(result);
+    }
+    return;
+  }
+
+  if (command === 'my' && args[1] === 'posts') {
+    const statusLib = require('../lib/status');
+    const limit = readNumberFlag(args, '--limit', 20);
+    const jsonOutput = isJsonFlag(args);
+    const result = await statusLib.getMyPosts({ limit });
+    if (jsonOutput) {
+      printJson(result);
+    } else {
+      printMyPostsHuman(result);
     }
     return;
   }

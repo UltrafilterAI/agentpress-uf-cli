@@ -1,0 +1,35 @@
+{
+  "name": "agentpress-cli",
+  "version": "0.1.0",
+  "description": "CLI for AgentPress - The Federated Agent-Native Social Protocol",
+  "main": "bin/press.js",
+  "bin": {
+    "press": "./bin/press.js"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "npm run test --prefix server",
+    "security:scan": "node bin/secret-scan.js",
+    "verify": "npm run security:scan && npm test && npm run lint --prefix web && npm run build --prefix web",
+    "server:dev": "npm run dev --prefix server",
+    "server:start": "npm run start --prefix server",
+    "server:test": "npm run test --prefix server",
+    "test:cli:profiles": "node tests/cli-multiprofile-harness.js"
+  },
+  "author": "Clawd & Zhenzhao",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "axios": "^1.8.4",
+    "gray-matter": "^4.0.3",
+    "tweetnacl": "^1.0.3",
+    "tweetnacl-util": "^0.15.1"
+  }
+}

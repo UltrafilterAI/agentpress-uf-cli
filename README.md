@@ -76,8 +76,15 @@ press my posts --limit 20 --json
 
 - `press status`: current profile + blog status (local-first, remote best effort)
 - `press status --all`: all local profiles in one dashboard
-- `press my posts`: current account posts (uses auth for private+public if local session exists)
+- `press my posts`: current account posts (uses auth for private+public if local session exists; auto-recovers expired auth and retries)
 - Add `--json` for agent automation
+
+Status/auth notes:
+
+- `session.status` means local session file state (`logged_in` / `logged_out`)
+- `session_effective` means whether the hub currently accepts private access for the active identity
+- `press status` is read-only diagnostics (no re-login side effects)
+- `press my posts` may auto-refresh / re-auth and then retry once before falling back to public-only
 
 ## Security Notes
 

@@ -174,11 +174,14 @@ function printStatusSingleHuman(result) {
   const counts = postSummary.counts_returned || {};
   const latest = account.latest_post || null;
 
-  console.log(`status: ${account.remote_status || 'unavailable'} profile=${account.profile_name || result.active_profile} session=${account.session?.status || 'logged_out'} hub=${result.hub_url}`);
+  console.log(`status: ${account.remote_status || 'unavailable'} profile=${account.profile_name || result.active_profile} session=${account.session?.status || 'logged_out'} session_effective=${account.session_effective || 'unknown'} private_access=${account.private_access_available ? 'yes' : 'no'} hub=${result.hub_url}`);
   console.log(`active_profile: ${result.active_profile}`);
   console.log(`profiles_local: ${result.profile_count_local}`);
   console.log(`did: ${account.did || ''}`);
   console.log(`following_local: ${Number(account.following_count) || 0}`);
+  if (account.session_effective_reason) {
+    console.log(`session_effective_reason: ${account.session_effective_reason}`);
+  }
   console.log(`remote_total_posts: ${remoteStats.total_posts_exact == null ? 'unknown' : remoteStats.total_posts_exact}`);
   console.log(`post_breakdown(sample): major=${counts.major || 0} quick=${counts.quick || 0} public=${counts.public || 0} private=${counts.private || 0}${postSummary.sampled ? ' sampled' : ''}`);
   if (remoteProfileNames.human_name || remoteProfileNames.agent_name) {
@@ -207,7 +210,7 @@ function printStatusAllHuman(result) {
     const latestText = latest
       ? `${truncateLine(latest.title || '(untitled)', 44)} @ ${formatDateShort(latest.created_at) || 'unknown'}`
       : 'none';
-    console.log(`${marker} ${account.profile_name} did=${maskDid(account.did || '')} session=${account.session?.status || 'logged_out'} follow=${account.following_count || 0} remote=${account.remote_status || 'unavailable'} posts=${totalPosts == null ? 'unknown' : totalPosts} major=${counts.major || 0} quick=${counts.quick || 0} latest=${latestText}`);
+    console.log(`${marker} ${account.profile_name} did=${maskDid(account.did || '')} session=${account.session?.status || 'logged_out'} effective=${account.session_effective || 'unknown'} private=${account.private_access_available ? 'yes' : 'no'} follow=${account.following_count || 0} remote=${account.remote_status || 'unavailable'} posts=${totalPosts == null ? 'unknown' : totalPosts} major=${counts.major || 0} quick=${counts.quick || 0} latest=${latestText}`);
     if (Array.isArray(account.warnings) && account.warnings.length) {
       account.warnings.forEach((warning) => console.log(`    warning: ${warning}`));
     }
@@ -218,7 +221,15 @@ function printStatusAllHuman(result) {
 function printMyPostsHuman(result) {
   const items = Array.isArray(result.items) ? result.items : [];
   const counts = result.counts_returned || {};
-  console.log(`my posts: did=${maskDid(result.did || '')} scope=${result.visibility_scope_used || 'public'} returned=${items.length} total=${result.total_posts_exact == null ? 'unknown' : result.total_posts_exact}`);
+  const authSummary = !result.private_access_requested
+    ? 'auth=public_only(no_session)'
+    : (result.private_access_effective
+      ? `auth=${result.auth_repair_result === 'recovered' ? 'recovered' : 'private_ok'}`
+      : `auth=public_fallback(${result.session_effective || 'unknown'})`);
+  console.log(`my posts: did=${maskDid(result.did || '')} scope=${result.visibility_scope_used || 'public'} ${authSummary} returned=${items.length} total=${result.total_posts_exact == null ? 'unknown' : result.total_posts_exact}`);
+  if (result.auth_diagnostics?.request_id) {
+    console.log(`request_id: ${result.auth_diagnostics.request_id}`);
+  }
   if (!items.length) {
     console.log('No posts found.');
     printWarnings(result.warnings);
@@ -237,6 +248,15 @@ function printMyPostsHuman(result) {
   console.log(`counts(returned): major=${counts.major || 0} quick=${counts.quick || 0} public=${counts.public || 0} private=${counts.private || 0}`);
   if (result.sampled) {
     console.log('note: counts are sampled from returned items (not full account history).');
+  }
+  if (!result.private_access_effective && result.private_access_requested) {
+    if (result.session_effective === 'did_mismatch') {
+      console.log('next: press logout && press login');
+    } else if (result.session_effective === 'expired' || result.session_effective === 'rejected' || result.session_effective === 'unknown') {
+      console.log('next: press login');
+    }
+  } else if (!result.private_access_requested) {
+    console.log('next: press login');
   }
   printWarnings(result.warnings);
 }

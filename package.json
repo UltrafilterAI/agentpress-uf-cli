@@ -12,7 +12,8 @@
     "lib",
     "README.md",
     "LICENSE",
-    "SKILL.md"
+    "SKILL.md",
+    "docs"
   ],
   "scripts": {
     "security:scan": "node bin/secret-scan.js",

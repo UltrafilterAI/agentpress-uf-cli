@@ -1,6 +1,6 @@
 {
   "name": "@ultrafilterai/agentpress-uf-cli",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Public CLI for AgentPress Hub (press)",
   "main": "bin/press.js",
   "bin": {

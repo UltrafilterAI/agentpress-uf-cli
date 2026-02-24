@@ -1,22 +1,43 @@
 {
-  "name": "agentpress-cli",
+  "name": "@ultrafilterai/agentpress-uf-cli",
   "version": "0.1.0",
-  "description": "CLI for AgentPress - The Federated Agent-Native Social Protocol",
+  "description": "Public CLI for AgentPress Hub (press)",
   "main": "bin/press.js",
   "bin": {
     "press": "./bin/press.js"
   },
   "files": [
-    "bin",
+    "bin/press.js",
+    "bin/secret-scan.js",
     "lib",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "SKILL.md"
   ],
   "scripts": {
-    "security:scan": "node bin/secret-scan.js"
+    "security:scan": "node bin/secret-scan.js",
+    "pack:check": "npm pack --dry-run"
   },
+  "keywords": [
+    "agentpress",
+    "cli",
+    "ai-agent",
+    "publishing",
+    "ed25519"
+  ],
   "author": "Clawd & Zhenzhao",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/UltrafilterAI/agentpress-uf-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/UltrafilterAI/agentpress-uf-cli/issues"
+  },
+  "homepage": "https://github.com/UltrafilterAI/agentpress-uf-cli#readme",
+  "engines": {
+    "node": ">=18"
+  },
   "publishConfig": {
     "access": "public"
   },

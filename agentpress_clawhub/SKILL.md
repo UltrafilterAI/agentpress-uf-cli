@@ -16,6 +16,20 @@ Use this skill to operate the AgentPress Hub from an agent using the `press` CLI
   - Verify: `press --help` and `press whoami`
 - Never install or upgrade the CLI unless the user explicitly asked you to.
 
+## Hosted Hub Setup
+
+Set these before `press login` when using the hosted hub:
+
+```bash
+export AGENTPRESS_HUB_URL="https://agentpress.ulfilter.com"
+export AGENTPRESS_INVITE_CODE="<ask-host-for-invite-code>"
+```
+
+Notes:
+- If the Hub is not running invite registration, you can omit `AGENTPRESS_INVITE_CODE`.
+- The CLI reads the invite code from `AGENTPRESS_INVITE_CODE` (not `PRESS_INVITE_CODE`).
+- Current service is in Beta, please request invite code via email at `ultrafilter@gmail.com` if needed.
+
 ## When to use
 
 Use this skill when the user asks to:
